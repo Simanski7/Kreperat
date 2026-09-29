@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fotbalový Manažer & Taktický Simulátor | Šimon Kreperát</title>
+  <meta name="description" content="Samostatná jednosouborová webová aplikace s fotbalovou tématikou: taktická tabule, zápasový simulátor, penaltový rozstřel a kvíz.">
+  <style>
+    /* ==========================================================================
+       RESET & BASE DESIGN SYSTEM (60-30-10, ZERO EXTERNAL DEPENDENCIES)
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-canvas: #0b1310;
+      --bg-surface: #13221c;
+      --bg-surface-elevated: #1a2f26;
+      --bg-surface-subtle: #0f1c16;
+      --pitch-grass: #1b4d3e;
+      --pitch-grass-light: #215e4c;
+      --pitch-line: rgba(255, 255, 255, 0.75);
+      --border-subtle: rgba(255, 255, 255, 0.1);
+      --border-focus: #10b981;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent-gold: #f59e0b;
+      --accent-gold-hover: #d97706;
+      --accent-emerald: #10b981;
+      --accent-crimson: #ef4444;
+      --accent-blue: #38bdf8;
+      --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+      --transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      font-family: var(--font-stack);
+      line-height: 1.5;
+      font-size: 15px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* TOP BAR CONTRACT: Brand | 4-6 Nav Links | Primary Actions */
+    header.top-bar {
+      height: 64px;
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .brand-title svg {
+      width: 24px;
+      height: 24px;
+      color: var(--accent-emerald);
+    }
+
+    nav.nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+
+    .nav-btn:hover {
+      color: var(--text-main);
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-btn.active {
+      color: #ffffff;
+      background-color: var(--bg-surface-elevated);
+      border-color: var(--border-subtle);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-action {
+      background-color: var(--accent-emerald);
+      color: #062419;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+
+    .btn-action:hover {
+      background-color: #34d399;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background-color: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      font-weight: 500;
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+
+    .btn-secondary:hover {
+      background-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* MAIN CONTAINER */
+    main.main-viewport {
+      max-width: 1380px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+      flex: 1;
+    }
+
+    .tab-section {
+      display: none;
+      animation: fadeIn 0.2s ease-out forwards;
+    }
+
+    .tab-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* TYPOGRAPHY & HEADINGS (ANTI-SLOP: No // prefixes or pills) */
+    .section-header {
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+
+    .section-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* GRID LAYOUTS */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* CARD STYLING */
+    .app-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+    }
+
+    /* PITCH CONTAINER & FIELD */
+    .pitch-wrapper {
+      position: relative;
+      background: radial-gradient(circle at center, var(--pitch-grass-light) 0%, var(--pitch-grass) 100%);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: var(--radius-md);
+      aspect-ratio: 16 / 10;
+      min-height: 520px;
+      overflow: hidden;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
+      user-select: none;
+    }
+
+    /* Pitch Grass Stripes (Alternating bands) */
+    .pitch-stripes {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.05) 0,
+        rgba(0, 0, 0, 0.05) 10%,
+        transparent 10%,
+        transparent 20%
+      );
+      pointer-events: none;
+    }
+
+    /* SVG Pitch Markings */
+    .pitch-svg-lines {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    /* Pitch Player Token */
+    .pitch-player {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 70px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: grab;
+      transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease;
+      z-index: 10;
+    }
+
+    .pitch-player:active {
+      cursor: grabbing;
+      transform: translate(-50%, -50%) scale(1.08);
+      z-index: 20;
+    }
+
+    .jersey-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e11d48 0%, #9f1239 100%);
+      border: 2px solid #ffffff;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      font-family: var(--font-mono);
+    }
+
+    .jersey-circle.gk {
+      background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+      color: #1a1a1a;
+    }
+
+    .jersey-circle.away {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    }
+
+    .player-label {
+      margin-top: 4px;
+      background: rgba(0, 0, 0, 0.75);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      text-align: center;
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* FORMATION BAR */
+    .tactics-control-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      background-color: var(--bg-surface-subtle);
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .select-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .select-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    select.app-select, input.app-input {
+      background-color: var(--bg-surface-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    select.app-select:focus, input.app-input:focus {
+      border-color: var(--accent-emerald);
+    }
+
+    /* MATCH SIMULATOR STYLES */
+    .scoreboard-banner {
+      background: linear-gradient(180deg, #13271f 0%, #0c1a14 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .matchup-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .team-badge-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .team-badge-box.home {
+      justify-content: flex-end;
+    }
+
+    .team-badge-box.away {
+      justify-content: flex-start;
+      flex-direction: row-reverse;
+    }
+
+    .team-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .team-tactics-tag {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .score-display {
+      background-color: #050a08;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-md);
+      padding: 12px 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .score-numbers {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: #ffffff;
+      font-family: var(--font-mono);
+      line-height: 1;
+    }
+
+    .match-clock {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-emerald);
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--accent-crimson);
+      display: inline-block;
+      animation: pulseLive 1.2s infinite;
+    }
+
+    @keyframes pulseLive {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* MATCH CONTROLS */
+    .match-action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    /* COMMENTARY LOG */
+    .commentary-feed {
+      height: 380px;
+      overflow-y: auto;
+      background-color: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .comment-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      background-color: rgba(255, 255, 255, 0.02);
+      border-left: 3px solid var(--border-subtle);
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .comment-item.goal {
+      border-left-color: var(--accent-gold);
+      background-color: rgba(245, 158, 11, 0.08);
+      font-weight: 600;
+    }
+
+    .comment-item.card {
+      border-left-color: var(--accent-crimson);
+      background-color: rgba(239, 68, 68, 0.08);
+    }
+
+    .comment-minute {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent-emerald);
+      white-space: nowrap;
+      min-width: 32px;
+    }
+
+    /* STATS TABLE */
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .stats-table td {
+      padding: 10px 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stats-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      text-align: center;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 12px;
+    }
+
+    .stat-val-home {
+      text-align: right;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      width: 60px;
+    }
+
+    .stat-val-away {
+      text-align: left;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      width: 60px;
+    }
+
+    /* PENALTY SHOOTOUT CANVAS VIEW */
+    .penalty-arena {
+      position: relative;
+      background: linear-gradient(180deg, #10211a 0%, #08120e 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px;
+    }
+
+    .goal-post-container {
+      width: 100%;
+      max-width: 680px;
+      height: 300px;
+      position: relative;
+      background: radial-gradient(circle at bottom, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
+      border-bottom: 6px solid #15803d;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    /* The Goal Frame */
+    .goal-frame {
+      width: 80%;
+      height: 220px;
+      border: 8px solid #ffffff;
+      border-bottom: none;
+      position: relative;
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.05),
+        rgba(255, 255, 255, 0.05) 12px,
+        rgba(255, 255, 255, 0.12) 12px,
+        rgba(255, 255, 255, 0.12) 24px
+      );
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.15);
+    }
+
+    /* Target Zones for Click */
+    .shoot-target-grid {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 4px;
+      padding: 6px;
+    }
+
+    .target-cell {
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 4px;
+      transition: var(--transition);
+      background-color: rgba(0, 0, 0, 0.15);
+    }
+
+    .target-cell:hover {
+      background-color: rgba(16, 185, 129, 0.25);
+      border-color: var(--accent-emerald);
+      color: #ffffff;
+      transform: scale(0.98);
+    }
+
+    /* Goalkeeper on Pitch */
+    .goalkeeper-figure {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 64px;
+      height: 90px;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    /* Ball Sprite */
+    .penalty-ball {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 32px;
+      height: 32px;
+      transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+      z-index: 20;
+    }
+
+    /* Scoreboard for Shootout */
+    .shootout-tracker {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      margin-top: 24px;
+      font-family: var(--font-mono);
+    }
+
+    .shootout-team {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .kick-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      display: inline-block;
+    }
+
+    .kick-dot.scored {
+      background-color: var(--accent-emerald);
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+
+    .kick-dot.missed {
+      background-color: var(--accent-crimson);
+      border-color: var(--accent-crimson);
+    }
+
+    /* QUIZ SECTION */
+    .quiz-container {
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    .quiz-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 28px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .quiz-question {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+
+    .quiz-options {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .quiz-btn {
+      text-align: left;
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: var(--transition);
+    }
+
+    .quiz-btn:hover:not(:disabled) {
+      background-color: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateX(4px);
+    }
+
+    .quiz-btn.correct {
+      background-color: rgba(16, 185, 129, 0.2);
+      border-color: var(--accent-emerald);
+      color: #34d399;
+    }
+
+    .quiz-btn.wrong {
+      background-color: rgba(239, 68, 68, 0.2);
+      border-color: var(--accent-crimson);
+      color: #f87171;
+    }
+
+    /* FOOTER */
+    footer.app-footer {
+      border-top: 1px solid var(--border-subtle);
+      padding: 20px 24px;
+      background-color: var(--bg-surface-subtle);
+      margin-top: auto;
+    }
+
+    .footer-content {
+      max-width: 1380px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .footer-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* TOAST NOTIFICATION */
+    .toast-msg {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background-color: var(--bg-surface-elevated);
+      color: #ffffff;
+      border: 1px solid var(--accent-emerald);
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+
+    .toast-msg.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+<script src="/_aistudio-iframe.js?v=2c34bde1"></script></head>
+<body>
+
+  <!-- TOP BAR CONTRACT (Brand | 4-6 Nav Items | Primary Action) -->
+  <header class="top-bar">
+    <a href="#" class="brand-title" onclick="switchTab('tactics'); return false;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="m4.93 4.93 4.24 4.24"></path>
+        <path d="m14.83 9.17 4.24-4.24"></path>
+        <path d="m14.83 14.83 4.24 4.24"></path>
+        <path d="m9.17 14.83-4.24 4.24"></path>
+        <circle cx="12" cy="12" r="4"></circle>
+      </svg>
+      <span>Kreperát Football Hub</span>
+    </a>
+
+    <nav class="nav-links">
+      <button class="nav-btn active" data-tab="tactics" onclick="switchTab('tactics')">
+        Taktická tabule
+      </button>
+      <button class="nav-btn" data-tab="match" onclick="switchTab('match')">
+        Zápasový simulátor
+      </button>
+      <button class="nav-btn" data-tab="penalties" onclick="switchTab('penalties')">
+        Penaltový rozstřel
+      </button>
+      <button class="nav-btn" data-tab="tournament" onclick="switchTab('tournament')">
+        Turnaj & Liga
+      </button>
+      <button class="nav-btn" data-tab="quiz" onclick="switchTab('quiz')">
+        Fotbalový kvíz
+      </button>
+    </nav>
+
+    <div class="header-actions">
+      <button class="btn-secondary" onclick="exportData()" title="Zálohovat rozestavení a statistiky">
+        Exportovat data
+      </button>
+      <button class="btn-action" onclick="playRefereeWhistle()">
+        Písknout píšťalkou
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT -->
+  <main class="main-viewport">
+
+    <!-- TAB 1: TAKTICKÁ TABULE A SESTAVA -->
+    <section id="tab-tactics" class="tab-section active">
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">01. Taktická tabule & Rozestavení týmu</h1>
+          <p class="section-subtitle">Interaktivní hřiště: přetahujte hráče myší nebo dotykem, měňte formace a herní styl týmu.</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" onclick="resetDefaultLineup()">Reset na základ</button>
+          <button class="btn-action" onclick="saveTactics()">Uložit taktiku</button>
+        </div>
+      </div>
+
+      <div class="tactics-control-bar">
+        <div class="select-group">
+          <label class="select-label" for="formationSelect">Rozestavení:</label>
+          <select id="formationSelect" class="app-select" onchange="changeFormation(this.value)">
+            <option value="4-3-3">4-3-3 (Ofenzivní křídla)</option>
+            <option value="4-4-2">4-4-2 (Klasická vyváženost)</option>
+            <option value="4-2-3-1">4-2-3-1 (Moderní kontrola)</option>
+            <option value="3-5-2">3-5-2 (Dominance zálohy)</option>
+            <option value="5-3-2">5-3-2 (Neprostupná obrana)</option>
+          </select>
+        </div>
+
+        <div class="select-group">
+          <label class="select-label" for="styleSelect">Herní styl:</label>
+          <select id="styleSelect" class="app-select">
+            <option value="tikitaka">Tiki-Taka (Krátké přihrávky)</option>
+            <option value="counter">Rychlé protiútoky</option>
+            <option value="pressing">Vysoký Gegenpressing</option>
+            <option value="direct">Přímý fotbal & Dlouhé míče</option>
+          </select>
+        </div>
+
+        <div class="select-group">
+          <label class="select-label" for="teamKitSelect">Dres týmu:</label>
+          <select id="teamKitSelect" class="app-select" onchange="updateKitColor(this.value)">
+            <option value="home">Domácí (Červeno-bílý)</option>
+            <option value="away">Hostující (Blankytně modrý)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- THE INTERACTIVE FOOTBALL PITCH -->
+        <div class="pitch-wrapper" id="pitchArea">
+          <div class="pitch-stripes"></div>
+
+          <!-- PITCH MARKINGS SVG -->
+          <svg class="pitch-svg-lines" viewBox="0 0 1000 625" preserveAspectRatio="none">
+            <!-- Outer Boundary -->
+            <rect x="25" y="25" width="950" height="575" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <!-- Halfway Line -->
+            <line x1="500" y1="25" x2="500" y2="600" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <!-- Center Circle -->
+            <circle cx="500" cy="312.5" r="75" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <circle cx="500" cy="312.5" r="4" fill="rgba(255,255,255,0.9)" />
+            <!-- Left Penalty Area -->
+            <rect x="25" y="142" width="140" height="341" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <rect x="25" y="215" width="50" height="195" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <circle cx="100" cy="312.5" r="3" fill="rgba(255,255,255,0.9)" />
+            <path d="M 165 245 A 75 75 0 0 1 165 380" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <!-- Right Penalty Area -->
+            <rect x="835" y="142" width="140" height="341" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <rect x="925" y="215" width="50" height="195" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <circle cx="900" cy="312.5" r="3" fill="rgba(255,255,255,0.9)" />
+            <path d="M 835 245 A 75 75 0 0 0 835 380" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <!-- Corner Arcs -->
+            <path d="M 25 45 A 20 20 0 0 0 45 25" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <path d="M 25 580 A 20 20 0 0 1 45 600" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <path d="M 975 45 A 20 20 0 0 1 955 25" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+            <path d="M 975 580 A 20 20 0 0 0 955 600" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" />
+          </svg>
+
+          <!-- PLAYERS CONTAINER (Populated dynamically) -->
+          <div id="pitchPlayersLayer"></div>
+        </div>
+
+        <!-- TACTICAL SIDEBAR -->
+        <aside class="app-card">
+          <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: #fff;">Detail vybraného hráče</h2>
+          <div id="playerEditPanel">
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Klikněte na hráče na ploše pro editaci jména a čísla dresu.</p>
+            <div style="margin-bottom: 12px;">
+              <label class="select-label" style="display:block; margin-bottom:4px;">Jméno hráče:</label>
+              <input type="text" id="editPlayerName" class="app-input" style="width: 100%;" value="Vyberte hráče" />
+            </div>
+            <div style="margin-bottom: 16px; display: flex; gap: 10px;">
+              <div style="flex: 1;">
+                <label class="select-label" style="display:block; margin-bottom:4px;">Číslo dresu:</label>
+                <input type="number" id="editPlayerNumber" class="app-input" style="width: 100%;" min="1" max="99" value="10" />
+              </div>
+              <div style="flex: 1;">
+                <label class="select-label" style="display:block; margin-bottom:4px;">Pozice:</label>
+                <input type="text" id="editPlayerRole" class="app-input" style="width: 100%;" value="ST" />
+              </div>
+            </div>
+            <button class="btn-action" style="width: 100%; justify-content: center;" onclick="applyPlayerEdit()">
+              Potvrdit změny hráče
+            </button>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 20px 0;">
+
+          <h2 style="font-size: 15px; font-weight: 700; margin-bottom: 10px; color: #fff;">Týmová chemie & Pokyny</h2>
+          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Souhra týmu:</span>
+              <span style="font-weight: 700; color: var(--accent-emerald);">94 / 100</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Obranná linie:</span>
+              <span style="font-weight: 600;">Středně vysunutá</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Tempo hry:</span>
+              <span style="font-weight: 600;">Vysoké (Dynamic)</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Exekutor penalt:</span>
+              <span style="font-weight: 600;" id="penaltyTakerDisplay">Kreperát (9)</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- TAB 2: ZÁPASOVÝ SIMULÁTOR -->
+    <section id="tab-match" class="tab-section">
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">02. Interaktivní zápasový simulátor</h1>
+          <p class="section-subtitle">Realistický zápasový engine v reálném čase s komentářem, taktickými reakcemi a detailními statistikami.</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" onclick="resetMatchState()">Nový zápas</button>
+        </div>
+      </div>
+
+      <!-- SCOREBOARD -->
+      <div class="scoreboard-banner">
+        <div class="matchup-row">
+          <!-- Home Team -->
+          <div class="team-badge-box home">
+            <div>
+              <div class="team-name" id="matchHomeName">SK Slavia Praha</div>
+              <div class="team-tactics-tag">Formace: 4-3-3 · Vysoký presink</div>
+            </div>
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: #e11d48; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid #fff;">SLA</div>
+          </div>
+
+          <!-- Score & Time -->
+          <div class="score-display">
+            <div class="score-numbers" id="liveScoreboard">0 : 0</div>
+            <div class="match-clock">
+              <span class="live-dot" id="liveDotIndicator" style="display:none;"></span>
+              <span id="liveMatchMinute">0'</span>
+              <span id="liveMatchPeriod">Připraveno k výkopu</span>
+            </div>
+          </div>
+
+          <!-- Away Team -->
+          <div class="team-badge-box away">
+            <div>
+              <div class="team-name" id="matchAwayName">AC Sparta Praha</div>
+              <div class="team-tactics-tag">Formace: 3-5-2 · Protiútoky</div>
+            </div>
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: #0284c7; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid #fff;">SPA</div>
+          </div>
+        </div>
+
+        <!-- ACTION BAR -->
+        <div class="match-action-bar">
+          <button class="btn-action" id="startMatchBtn" onclick="toggleMatchSimulation()">
+            Zahájit zápas (Výkop)
+          </button>
+          <button class="btn-secondary" onclick="makeTacticalAdjustment('press')">
+            Pokyn: Zvýšit presink!
+          </button>
+          <button class="btn-secondary" onclick="makeTacticalAdjustment('shoot')">
+            Pokyn: Střílet ze všech pozic!
+          </button>
+          <button class="btn-secondary" onclick="makeTacticalAdjustment('defend')">
+            Pokyn: Zatáhnout obranu
+          </button>
+        </div>
+      </div>
+
+      <!-- MATCH FEED & STATS -->
+      <div class="dashboard-grid">
+        <div class="app-card">
+          <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: #fff;">Živý textový komentář</h2>
+          <div class="commentary-feed" id="commentaryFeed">
+            <div class="comment-item">
+              <span class="comment-minute">0'</span>
+              <span>Rozhodčí přivádí oba týmy na hrací plochu. Hřiště je v perfektním stavu.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-card">
+          <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: #fff;">Statistiky utkání</h2>
+          <table class="stats-table">
+            <tbody>
+              <tr>
+                <td class="stat-val-home" id="statPossessionHome">50%</td>
+                <td class="stat-label">Držení míče</td>
+                <td class="stat-val-away" id="statPossessionAway">50%</td>
+              </tr>
+              <tr>
+                <td class="stat-val-home" id="statShotsHome">0</td>
+                <td class="stat-label">Střely celkem</td>
+                <td class="stat-val-away" id="statShotsAway">0</td>
+              </tr>
+              <tr>
+                <td class="stat-val-home" id="statShotsTargetHome">0</td>
+                <td class="stat-label">Střely na bránu</td>
+                <td class="stat-val-away" id="statShotsTargetAway">0</td>
+              </tr>
+              <tr>
+                <td class="stat-val-home" id="statXGHome">0.00</td>
+                <td class="stat-label">Očekávané góly (xG)</td>
+                <td class="stat-val-away" id="statXGAway">0.00</td>
+              </tr>
+              <tr>
+                <td class="stat-val-home" id="statCornersHome">0</td>
+                <td class="stat-label">Rohové kopy</td>
+                <td class="stat-val-away" id="statCornersAway">0</td>
+              </tr>
+              <tr>
+                <td class="stat-val-home" id="statFoulsHome">0</td>
+                <td class="stat-label">Fauly</td>
+                <td class="stat-val-away" id="statFoulsAway">0</td>
+              </tr>
+              <tr>
+                <td class="stat-val-home" id="statCardsHome">0</td>
+                <td class="stat-label">Žluté karty</td>
+                <td class="stat-val-away" id="statCardsAway">0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PENALTOVÝ ROZSTŘEL MINI-HRA -->
+    <section id="tab-penalties" class="tab-section">
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">03. Penaltový rozstřel (Mini-hra)</h1>
+          <p class="section-subtitle">Otestujte své zakončení! Vyberte cíl v bráně a překonejte reagujícího brankáře v sérii 5 penalt.</p>
+        </div>
+        <button class="btn-secondary" onclick="resetPenaltyShootout()">Restartovat rozstřel</button>
+      </div>
+
+      <div class="penalty-arena">
+        <div class="goal-post-container" id="goalArena">
+          <!-- The Goal Frame with clickable shooting zones -->
+          <div class="goal-frame">
+            <div class="shoot-target-grid">
+              <div class="target-cell" onclick="takePenaltyShot('TL')">Vinkl vlevo</div>
+              <div class="target-cell" onclick="takePenaltyShot('TC')">Břevno střed</div>
+              <div class="target-cell" onclick="takePenaltyShot('TR')">Vinkl vpravo</div>
+              <div class="target-cell" onclick="takePenaltyShot('BL')">K tyči vlevo</div>
+              <div class="target-cell" onclick="takePenaltyShot('BC')">Přízemní střed</div>
+              <div class="target-cell" onclick="takePenaltyShot('BR')">K tyči vpravo</div>
+            </div>
+
+            <!-- Goalkeeper SVG/Graphic -->
+            <div class="goalkeeper-figure" id="keeperFig">
+              <svg viewBox="0 0 64 90" fill="none" style="width:100%; height:100%;">
+                <!-- Head -->
+                <circle cx="32" cy="18" r="10" fill="#fbcfe8" stroke="#1f2937" stroke-width="2"/>
+                <!-- Torso (GK Jersey) -->
+                <rect x="20" y="28" width="24" height="32" rx="4" fill="#eab308" stroke="#1f2937" stroke-width="2"/>
+                <!-- Arms stretched -->
+                <path d="M 20 34 L 6 22" stroke="#eab308" stroke-width="6" stroke-linecap="round"/>
+                <path d="M 44 34 L 58 22" stroke="#eab308" stroke-width="6" stroke-linecap="round"/>
+                <!-- Goalkeeper Gloves -->
+                <circle cx="6" cy="22" r="5" fill="#10b981"/>
+                <circle cx="58" cy="22" r="5" fill="#10b981"/>
+                <!-- Legs -->
+                <rect x="22" y="60" width="8" height="26" fill="#1f2937"/>
+                <rect x="34" y="60" width="8" height="26" fill="#1f2937"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Ball -->
+          <div class="penalty-ball" id="penaltyBall">
+            <svg viewBox="0 0 32 32" style="width:100%; height:100%;">
+              <circle cx="16" cy="16" r="14" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+              <polygon points="16,8 22,12 20,18 12,18 10,12" fill="#0f172a"/>
+              <line x1="16" y1="8" x2="16" y2="2" stroke="#0f172a" stroke-width="1.5"/>
+              <line x1="22" y1="12" x2="28" y2="10" stroke="#0f172a" stroke-width="1.5"/>
+              <line x1="20" y1="18" x2="24" y2="24" stroke="#0f172a" stroke-width="1.5"/>
+              <line x1="12" y1="18" x2="8" y2="24" stroke="#0f172a" stroke-width="1.5"/>
+              <line x1="10" y1="12" x2="4" y2="10" stroke="#0f172a" stroke-width="1.5"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- SHOOTOUT RESULTS TRACKER -->
+        <div class="shootout-tracker">
+          <div class="shootout-team">
+            <span style="font-weight:700; color:#fff; margin-right:8px;">Hráč:</span>
+            <div id="playerDots" style="display:flex; gap:6px;">
+              <span class="kick-dot"></span>
+              <span class="kick-dot"></span>
+              <span class="kick-dot"></span>
+              <span class="kick-dot"></span>
+              <span class="kick-dot"></span>
+            </div>
+            <span id="playerPenaltyScore" style="font-weight:700; margin-left:8px; font-size:16px;">0</span>
+          </div>
+
+          <span style="color:var(--text-muted); font-weight:700;">VS</span>
+
+          <div class="shootout-team">
+            <span style="font-weight:700; color:#fff; margin-right:8px;">Brankář (AI):</span>
+            <div id="aiDots" style="display:flex; gap:6px;">
+              <span class="kick-dot"></span>
+              <span class="kick-dot"></span>
+              <span class="kick-dot"></span>
+              <span class="kick-dot"></span>
+              <span class="kick-dot"></span>
+            </div>
+            <span id="aiPenaltyScore" style="font-weight:700; margin-left:8px; font-size:16px;">0</span>
+          </div>
+        </div>
+
+        <div id="penaltyMessage" style="margin-top:16px; font-size:14px; font-weight:600; color:var(--text-muted);">
+          Vyberte jeden ze 6 čtverců v bráně pro střelu na bránu.
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: TURNAJOVÝ PAVOUK A LIGA -->
+    <section id="tab-tournament" class="tab-section">
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">04. Turnaj & Ligová tabulka</h1>
+          <p class="section-subtitle">Simulace pohárového vyřazovacího turnaje a ligové tabulky se sledováním skóre a bodů.</p>
+        </div>
+        <button class="btn-action" onclick="simulateFullTournament()">Nasimulovat celý turnaj</button>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- Tournament Bracket -->
+        <div class="app-card">
+          <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #fff;">Vyřazovací pohár (Play-off)</h2>
+          
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Semifinále</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div style="background:var(--bg-surface-elevated); padding:10px; border-radius:6px; border:1px solid var(--border-subtle);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                  <span>Slavia Praha</span>
+                  <span style="font-weight:700; font-family:var(--font-mono);" id="semiScore1">3</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span>Viktoria Plzeň</span>
+                  <span style="font-weight:700; font-family:var(--font-mono);" id="semiScore2">1</span>
+                </div>
+              </div>
+
+              <div style="background:var(--bg-surface-elevated); padding:10px; border-radius:6px; border:1px solid var(--border-subtle);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                  <span>Sparta Praha</span>
+                  <span style="font-weight:700; font-family:var(--font-mono);" id="semiScore3">2</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span>Baník Ostrava</span>
+                  <span style="font-weight:700; font-family:var(--font-mono);" id="semiScore4">0</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--accent-gold); margin-top: 8px;">Finále Poháru</div>
+            <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(19, 34, 28, 0.8) 100%); border:1px solid rgba(245, 158, 11, 0.3); padding:14px; border-radius:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-size:15px; font-weight:700;" id="finalTeam1">Slavia Praha</span>
+                <span style="font-size:20px; font-weight:800; font-family:var(--font-mono); color:var(--accent-gold);" id="finalScore1">-</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:15px; font-weight:700;" id="finalTeam2">Sparta Praha</span>
+                <span style="font-size:20px; font-weight:800; font-family:var(--font-mono); color:var(--accent-gold);" id="finalScore2">-</span>
+              </div>
+              <div style="text-align:center; margin-top:10px; font-size:13px; font-weight:600; color:var(--accent-emerald);" id="tournamentWinnerTag">
+                Klikněte na "Nasimulovat celý turnaj" pro odehrání
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- League Standings Table -->
+        <div class="app-card">
+          <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: #fff;">Ligová tabulka</h2>
+          <table class="stats-table">
+            <thead>
+              <tr style="color:var(--text-muted); font-size:11px; text-transform:uppercase;">
+                <th style="text-align:left; padding-bottom:8px;"># Tým</th>
+                <th style="padding-bottom:8px;">Z</th>
+                <th style="padding-bottom:8px;">V</th>
+                <th style="padding-bottom:8px;">R</th>
+                <th style="padding-bottom:8px;">P</th>
+                <th style="padding-bottom:8px;">Skóre</th>
+                <th style="text-align:right; padding-bottom:8px;">Body</th>
+              </tr>
+            </thead>
+            <tbody id="leagueTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: FOTBALOVÝ KVÍZ -->
+    <section id="tab-quiz" class="tab-section">
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">05. Fotbalový kvíz & Vědomostní test</h1>
+          <p class="section-subtitle">Otestujte své fotbalové znalosti o českém i světovém fotbale, Lize mistrů a slavných šampionátech.</p>
+        </div>
+        <div style="font-size:14px; font-weight:600; color:var(--accent-emerald);" id="quizScoreHeader">
+          Skóre: 0 / 0
+        </div>
+      </div>
+
+      <div class="quiz-container">
+        <div class="quiz-card" id="quizCardBox">
+          <div style="display:flex; justify-content:space-between; margin-bottom:14px; font-size:12px; color:var(--text-muted);">
+            <span id="quizIndexTag">Otázka 1 z 5</span>
+            <span id="quizCategoryTag">Liga mistrů</span>
+          </div>
+
+          <h2 class="quiz-question" id="quizQuestionText">Který klub vyhrál historicky nejvíce titulů v Lize mistrů UEFA?</h2>
+
+          <div class="quiz-options" id="quizOptionsContainer">
+            <!-- Options populated by JS -->
+          </div>
+
+          <div id="quizExplanation" style="margin-top:16px; font-size:13px; color:var(--text-muted); display:none; padding:12px; background:rgba(255,255,255,0.03); border-radius:6px;"></div>
+
+          <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+            <button class="btn-action" id="nextQuestionBtn" style="display:none;" onclick="nextQuizQuestion()">
+              Další otázka
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast-msg" id="toastBox">Data byla úspěšně uložena.</div>
+
+  <!-- FOOTER -->
+  <footer class="app-footer">
+    <div class="footer-content">
+      <div class="footer-meta">
+        <span style="font-weight: 600; color:#fff;">Projekt: Jednosouborová aplikace (standalone HTML)</span>
+        <span>·</span>
+        <span>Autor: Šimon Kreperát</span>
+        <span>·</span>
+        <span>Soubor: prijmeni_nazev.html (kreperat_fotbal.html)</span>
+      </div>
+      <div>
+        <span>Připraveno pro hosting na GitHub Pages</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==========================================================================
+       JAVASCRIPT LOGIC (STANDALONE, ZERO DEPENDENCY)
+       ========================================================================== -->
+  <script>
+    // --- 1. AUDIO SYNTHESIS VIA WEB AUDIO API (NO EXTERNAL AUDIO FILES) ---
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+      whistle() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(2400, now);
+        osc.frequency.exponentialRampToValueAtTime(2800, now + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(2400, now + 0.16);
+        osc.frequency.exponentialRampToValueAtTime(2900, now + 0.28);
+        
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.45);
+      },
+      kick() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.12);
+        
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      },
+      cheer() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        // Synthesize noise buffer for stadium crowd roar
+        const bufferSize = this.ctx.sampleRate * 1.5;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(800, now);
+        filter.frequency.linearRampToValueAtTime(1200, now + 0.6);
+        filter.Q.value = 1.8;
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.35, now + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+        noise.stop(now + 1.5);
+      }
+    };
+
+    function playRefereeWhistle() {
+      AudioEngine.whistle();
+      showToast("Píšťalka rozhodčího zazněla!");
+    }
+
+    // --- 2. TAB NAVIGATION ---
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-section').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+      const target = document.getElementById('tab-' + tabId);
+      if (target) target.classList.add('active');
+
+      const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    // --- 3. TOAST NOTIFICATION ---
+    function showToast(msg) {
+      const toast = document.getElementById('toastBox');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2400);
+    }
+
+    // --- 4. TACTICS BOARD & FORMATIONS ---
+    const defaultPlayers = [
+      { id: 1, name: "Staněk", num: 1, role: "GK", x: 10, y: 50, isGK: true },
+      { id: 2, name: "Douděra", num: 21, role: "RB", x: 28, y: 84 },
+      { id: 3, name: "Holeš", num: 3, role: "CB", x: 26, y: 62 },
+      { id: 4, name: "Zima", num: 4, role: "CB", x: 26, y: 38 },
+      { id: 5, name: "Bořil", num: 18, role: "LB", x: 28, y: 16 },
+      { id: 6, name: "Oscar", num: 19, role: "CDM", x: 44, y: 50 },
+      { id: 7, name: "Zafeiris", num: 10, role: "CM", x: 58, y: 68 },
+      { id: 8, name: "Provod", num: 17, role: "CM", x: 58, y: 32 },
+      { id: 9, name: "Schranz", num: 26, role: "RW", x: 80, y: 82 },
+      { id: 10, name: "Kreperát", num: 9, role: "ST", x: 86, y: 50 },
+      { id: 11, name: "Jurásek", num: 35, role: "LW", x: 80, y: 18 }
+    ];
+
+    let currentPlayers = JSON.parse(JSON.stringify(defaultPlayers));
+    let selectedPlayerId = 10;
+    let kitStyle = "home";
+
+    function renderPitchPlayers() {
+      const container = document.getElementById('pitchPlayersLayer');
+      container.innerHTML = '';
+
+      currentPlayers.forEach(p => {
+        const el = document.createElement('div');
+        el.className = 'pitch-player';
+        el.style.left = `${p.x}%`;
+        el.style.top = `${p.y}%`;
+        el.setAttribute('data-id', p.id);
+
+        const circle = document.createElement('div');
+        circle.className = `jersey-circle ${p.isGK ? 'gk' : (kitStyle === 'away' ? 'away' : '')}`;
+        circle.textContent = p.num;
+
+        const label = document.createElement('div');
+        label.className = 'player-label';
+        label.textContent = `${p.name} (${p.role})`;
+
+        el.appendChild(circle);
+        el.appendChild(label);
+
+        // Click to select
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectPlayer(p.id);
+        });
+
+        // Drag handlers
+        makeDraggable(el, p);
+
+        container.appendChild(el);
+      });
+    }
+
+    function makeDraggable(el, playerObj) {
+      let isDragging = false;
+      let startX, startY;
+
+      function onStart(e) {
+        isDragging = true;
+        const evt = e.touches ? e.touches[0] : e;
+        startX = evt.clientX;
+        startY = evt.clientY;
+        el.style.zIndex = '30';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
+      }
+
+      function onMove(e) {
+        if (!isDragging) return;
+        if (e.cancelable) e.preventDefault();
+        const pitch = document.getElementById('pitchArea');
+        const rect = pitch.getBoundingClientRect();
+        const evt = e.touches ? e.touches[0] : e;
+
+        let posX = ((evt.clientX - rect.left) / rect.width) * 100;
+        let posY = ((evt.clientY - rect.top) / rect.height) * 100;
+
+        posX = Math.max(5, Math.min(95, posX));
+        posY = Math.max(8, Math.min(92, posY));
+
+        playerObj.x = Math.round(posX);
+        playerObj.y = Math.round(posY);
+
+        el.style.left = `${playerObj.x}%`;
+        el.style.top = `${playerObj.y}%`;
+      }
+
+      function onEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+        el.style.zIndex = '10';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+      }
+
+      el.addEventListener('mousedown', onStart);
+      el.addEventListener('touchstart', onStart, { passive: true });
+    }
+
+    function selectPlayer(id) {
+      selectedPlayerId = id;
+      const p = currentPlayers.find(x => x.id === id);
+      if (p) {
+        document.getElementById('editPlayerName').value = p.name;
+        document.getElementById('editPlayerNumber').value = p.num;
+        document.getElementById('editPlayerRole').value = p.role;
+      }
+    }
+
+    function applyPlayerEdit() {
+      const p = currentPlayers.find(x => x.id === selectedPlayerId);
+      if (p) {
+        p.name = document.getElementById('editPlayerName').value.trim() || p.name;
+        p.num = parseInt(document.getElementById('editPlayerNumber').value, 10) || p.num;
+        p.role = document.getElementById('editPlayerRole').value.trim().toUpperCase() || p.role;
+        renderPitchPlayers();
+        showToast(`Hráč ${p.name} byl upraven.`);
+      }
+    }
+
+    function changeFormation(f) {
+      if (f === '4-3-3') {
+        setCoordinates([
+          {id: 1, x: 10, y: 50},
+          {id: 2, x: 28, y: 84}, {id: 3, x: 26, y: 62}, {id: 4, x: 26, y: 38}, {id: 5, x: 28, y: 16},
+          {id: 6, x: 45, y: 50}, {id: 7, x: 60, y: 70}, {id: 8, x: 60, y: 30},
+          {id: 9, x: 82, y: 82}, {id: 10, x: 86, y: 50}, {id: 11, x: 82, y: 18}
+        ]);
+      } else if (f === '4-4-2') {
+        setCoordinates([
+          {id: 1, x: 10, y: 50},
+          {id: 2, x: 28, y: 84}, {id: 3, x: 26, y: 62}, {id: 4, x: 26, y: 38}, {id: 5, x: 28, y: 16},
+          {id: 6, x: 55, y: 85}, {id: 7, x: 52, y: 60}, {id: 8, x: 52, y: 40}, {id: 9, x: 55, y: 15},
+          {id: 10, x: 82, y: 60}, {id: 11, x: 82, y: 40}
+        ]);
+      } else if (f === '4-2-3-1') {
+        setCoordinates([
+          {id: 1, x: 10, y: 50},
+          {id: 2, x: 28, y: 84}, {id: 3, x: 26, y: 62}, {id: 4, x: 26, y: 38}, {id: 5, x: 28, y: 16},
+          {id: 6, x: 44, y: 62}, {id: 7, x: 44, y: 38},
+          {id: 8, x: 66, y: 50}, {id: 9, x: 68, y: 82}, {id: 11, x: 68, y: 18},
+          {id: 10, x: 86, y: 50}
+        ]);
+      } else if (f === '3-5-2') {
+        setCoordinates([
+          {id: 1, x: 10, y: 50},
+          {id: 3, x: 26, y: 72}, {id: 4, x: 24, y: 50}, {id: 5, x: 26, y: 28},
+          {id: 2, x: 48, y: 88}, {id: 6, x: 48, y: 50}, {id: 7, x: 62, y: 66}, {id: 8, x: 62, y: 34}, {id: 9, x: 48, y: 12},
+          {id: 10, x: 84, y: 60}, {id: 11, x: 84, y: 40}
+        ]);
+      } else if (f === '5-3-2') {
+        setCoordinates([
+          {id: 1, x: 10, y: 50},
+          {id: 2, x: 25, y: 88}, {id: 3, x: 22, y: 68}, {id: 4, x: 20, y: 50}, {id: 5, x: 22, y: 32}, {id: 9, x: 25, y: 12},
+          {id: 6, x: 50, y: 50}, {id: 7, x: 55, y: 70}, {id: 8, x: 55, y: 30},
+          {id: 10, x: 82, y: 58}, {id: 11, x: 82, y: 42}
+        ]);
+      }
+      renderPitchPlayers();
+      showToast(`Formace změněna na ${f}`);
+    }
+
+    function setCoordinates(arr) {
+      arr.forEach(item => {
+        const p = currentPlayers.find(x => x.id === item.id);
+        if (p) {
+          p.x = item.x;
+          p.y = item.y;
+        }
+      });
+    }
+
+    function updateKitColor(val) {
+      kitStyle = val;
+      renderPitchPlayers();
+    }
+
+    function resetDefaultLineup() {
+      currentPlayers = JSON.parse(JSON.stringify(defaultPlayers));
+      renderPitchPlayers();
+      selectPlayer(10);
+      showToast("Rozestavení bylo resetováno.");
+    }
+
+    function saveTactics() {
+      localStorage.setItem('kreperat_tactics', JSON.stringify(currentPlayers));
+      showToast("Taktika byla uložena do lokální paměti.");
+    }
+
+    // --- 5. MATCH SIMULATION ENGINE ---
+    let matchInterval = null;
+    let matchMinute = 0;
+    let homeScore = 0;
+    let awayScore = 0;
+    let matchStats = {
+      possHome: 52,
+      shotsHome: 0,
+      shotsAway: 0,
+      shotsTargetHome: 0,
+      shotsTargetAway: 0,
+      xgHome: 0.0,
+      xgAway: 0.0,
+      cornersHome: 0,
+      cornersAway: 0,
+      foulsHome: 0,
+      foulsAway: 0,
+      cardsHome: 0,
+      cardsAway: 0
+    };
+
+    function resetMatchState() {
+      clearInterval(matchInterval);
+      matchInterval = null;
+      matchMinute = 0;
+      homeScore = 0;
+      awayScore = 0;
+      matchStats = {
+        possHome: 52,
+        shotsHome: 0,
+        shotsAway: 0,
+        shotsTargetHome: 0,
+        shotsTargetAway: 0,
+        xgHome: 0.0,
+        xgAway: 0.0,
+        cornersHome: 0,
+        cornersAway: 0,
+        foulsHome: 0,
+        foulsAway: 0,
+        cardsHome: 0,
+        cardsAway: 0
+      };
+      document.getElementById('liveScoreboard').textContent = '0 : 0';
+      document.getElementById('liveMatchMinute').textContent = "0'";
+      document.getElementById('liveMatchPeriod').textContent = "Připraveno k výkopu";
+      document.getElementById('liveDotIndicator').style.display = 'none';
+      document.getElementById('startMatchBtn').textContent = "Zahájit zápas (Výkop)";
+      document.getElementById('commentaryFeed').innerHTML = `
+        <div class="comment-item">
+          <span class="comment-minute">0'</span>
+          <span>Rozhodčí přivádí oba týmy na hrací plochu. Hřiště je v perfektním stavu.</span>
+        </div>
+      `;
+      updateStatsUI();
+    }
+
+    function toggleMatchSimulation() {
+      if (matchInterval) {
+        clearInterval(matchInterval);
+        matchInterval = null;
+        document.getElementById('startMatchBtn').textContent = "Pokračovat v zápase";
+        document.getElementById('liveDotIndicator').style.display = 'none';
+        showToast("Zápas pozastaven.");
+      } else {
+        if (matchMinute >= 90) {
+          resetMatchState();
+        }
+        AudioEngine.whistle();
+        document.getElementById('startMatchBtn').textContent = "Pozastavit zápas";
+        document.getElementById('liveDotIndicator').style.display = 'inline-block';
+        document.getElementById('liveMatchPeriod').textContent = "Živě v průběhu";
+
+        matchInterval = setInterval(simulateMatchTick, 400); // Quick simulation tick
+      }
+    }
+
+    function simulateMatchTick() {
+      matchMinute += 1;
+      document.getElementById('liveMatchMinute').textContent = `${matchMinute}'`;
+
+      // Random dynamic events during game
+      const rand = Math.random();
+
+      // Home shot or goal chance
+      if (rand < 0.14) {
+        matchStats.shotsHome++;
+        AudioEngine.kick();
+        if (Math.random() < 0.45) {
+          matchStats.shotsTargetHome++;
+          matchStats.xgHome += +(Math.random() * 0.25).toFixed(2);
+          // Goal!
+          if (Math.random() < 0.28) {
+            homeScore++;
+            AudioEngine.cheer();
+            addCommentary(matchMinute, `GÓÓÓL! SK Slavia Praha skóruje! Šimon Kreperát napálil míč nekompromisně do šibenice!`, 'goal');
+          } else {
+            addCommentary(matchMinute, `Velká šance Slavie! Brankář hostí vyráží střelu na rohový kop.`);
+            matchStats.cornersHome++;
+          }
+        } else {
+          addCommentary(matchMinute, `Střela z dálky v podání domácích míří vedle levé tyče.`);
+        }
+      } 
+      // Away shot or goal chance
+      else if (rand > 0.86) {
+        matchStats.shotsAway++;
+        AudioEngine.kick();
+        if (Math.random() < 0.40) {
+          matchStats.shotsTargetAway++;
+          matchStats.xgAway += +(Math.random() * 0.22).toFixed(2);
+          // Away Goal!
+          if (Math.random() < 0.25) {
+            awayScore++;
+            AudioEngine.cheer();
+            addCommentary(matchMinute, `GÓL pro AC Sparta Praha! Rychlý brejk zakončený přesnou střelou k tyči.`, 'goal');
+          } else {
+            addCommentary(matchMinute, `Sparta v nadějné pozici, obrana však střelu včas zblokovala.`);
+            matchStats.cornersAway++;
+          }
+        }
+      }
+      // Yellow card or foul
+      else if (rand > 0.48 && rand < 0.52) {
+        if (Math.random() < 0.5) {
+          matchStats.foulsHome++;
+          if (Math.random() < 0.3) {
+            matchStats.cardsHome++;
+            addCommentary(matchMinute, `Žlutá karta pro domácího obránce za taktický faul na polovině hřiště.`, 'card');
+          }
+        } else {
+          matchStats.foulsAway++;
+          if (Math.random() < 0.3) {
+            matchStats.cardsAway++;
+            addCommentary(matchMinute, `Žlutá karta pro hráče Sparty za ostrý zákrok ve skluzu.`, 'card');
+          }
+        }
+      }
+
+      // Half-time whistle
+      if (matchMinute === 45) {
+        AudioEngine.whistle();
+        addCommentary(45, `Konec prvního poločasu. Hráči odcházejí do šaten.`);
+      }
+
+      // End of Match
+      if (matchMinute >= 90) {
+        clearInterval(matchInterval);
+        matchInterval = null;
+        AudioEngine.whistle();
+        document.getElementById('liveDotIndicator').style.display = 'none';
+        document.getElementById('liveMatchPeriod').textContent = "Konec zápasu";
+        document.getElementById('startMatchBtn').textContent = "Odehrát nový zápas";
+        addCommentary(90, `Konec utkání! Konečný stav: ${homeScore} : ${awayScore}. Děkujeme za pozornost.`, 'goal');
+        showToast(`Zápas skončil: ${homeScore} : ${awayScore}`);
+      }
+
+      document.getElementById('liveScoreboard').textContent = `${homeScore} : ${awayScore}`;
+      updateStatsUI();
+    }
+
+    function addCommentary(min, text, type = '') {
+      const feed = document.getElementById('commentaryFeed');
+      const item = document.createElement('div');
+      item.className = `comment-item ${type}`;
+      item.innerHTML = `<span class="comment-minute">${min}'</span><span>${text}</span>`;
+      feed.insertBefore(item, feed.firstChild);
+    }
+
+    function updateStatsUI() {
+      document.getElementById('statPossessionHome').textContent = `${matchStats.possHome}%`;
+      document.getElementById('statPossessionAway').textContent = `${100 - matchStats.possHome}%`;
+      document.getElementById('statShotsHome').textContent = matchStats.shotsHome;
+      document.getElementById('statShotsAway').textContent = matchStats.shotsAway;
+      document.getElementById('statShotsTargetHome').textContent = matchStats.shotsTargetHome;
+      document.getElementById('statShotsTargetAway').textContent = matchStats.shotsTargetAway;
+      document.getElementById('statXGHome').textContent = matchStats.xgHome.toFixed(2);
+      document.getElementById('statXGAway').textContent = matchStats.xgAway.toFixed(2);
+      document.getElementById('statCornersHome').textContent = matchStats.cornersHome;
+      document.getElementById('statCornersAway').textContent = matchStats.cornersAway;
+      document.getElementById('statFoulsHome').textContent = matchStats.foulsHome;
+      document.getElementById('statFoulsAway').textContent = matchStats.foulsAway;
+      document.getElementById('statCardsHome').textContent = matchStats.cardsHome;
+      document.getElementById('statCardsAway').textContent = matchStats.cardsAway;
+    }
+
+    function makeTacticalAdjustment(type) {
+      if (type === 'press') {
+        matchStats.possHome = Math.min(68, matchStats.possHome + 4);
+        addCommentary(matchMinute || 0, `Trenérský pokyn: Zvýšený presink po celém hřišti!`);
+        showToast("Taktika: Zvýšený presink aplikován!");
+      } else if (type === 'shoot') {
+        matchStats.shotsHome += 1;
+        addCommentary(matchMinute || 0, `Trenérský pokyn: Střílet při každé příležitosti!`);
+        showToast("Taktika: Příkaz ke střelbě aplikován!");
+      } else if (type === 'defend') {
+        matchStats.possHome = Math.max(38, matchStats.possHome - 5);
+        addCommentary(matchMinute || 0, `Trenérský pokyn: Zahuštění obranného bloku.`);
+        showToast("Taktika: Zatažená obrana aplikována!");
+      }
+      updateStatsUI();
+    }
+
+    // --- 6. PENALTY SHOOTOUT GAME ---
+    let playerKicks = 0;
+    let aiKicks = 0;
+    let playerScore = 0;
+    let aiScore = 0;
+    let isShooting = false;
+
+    function resetPenaltyShootout() {
+      playerKicks = 0;
+      aiKicks = 0;
+      playerScore = 0;
+      aiScore = 0;
+      isShooting = false;
+      document.getElementById('playerPenaltyScore').textContent = '0';
+      document.getElementById('aiPenaltyScore').textContent = '0';
+      document.getElementById('penaltyMessage').textContent = 'Vyberte jeden ze 6 čtverců v bráně pro střelu na bránu.';
+      
+      const pDots = document.getElementById('playerDots').children;
+      const aDots = document.getElementById('aiDots').children;
+      for (let i = 0; i < 5; i++) {
+        pDots[i].className = 'kick-dot';
+        aDots[i].className = 'kick-dot';
+      }
+
+      const ball = document.getElementById('penaltyBall');
+      ball.style.transition = 'none';
+      ball.style.left = '50%';
+      ball.style.bottom = '20px';
+      ball.style.transform = 'translateX(-50%) scale(1)';
+
+      const keeper = document.getElementById('keeperFig');
+      keeper.style.left = '50%';
+      keeper.style.bottom = '0';
+    }
+
+    function takePenaltyShot(targetCode) {
+      if (isShooting || playerKicks >= 5) return;
+      isShooting = true;
+
+      AudioEngine.kick();
+
+      const ball = document.getElementById('penaltyBall');
+      const keeper = document.getElementById('keeperFig');
+      const targets = {
+        'TL': { x: 22, y: 160 },
+        'TC': { x: 50, y: 175 },
+        'TR': { x: 78, y: 160 },
+        'BL': { x: 22, y: 40 },
+        'BC': { x: 50, y: 30 },
+        'BR': { x: 78, y: 40 }
+      };
+
+      const shot = targets[targetCode];
+
+      // Keeper AI decision: dives to one of the 6 zones
+      const zones = ['TL', 'TC', 'TR', 'BL', 'BC', 'BR'];
+      const keeperDive = zones[Math.floor(Math.random() * zones.length)];
+      const keeperTarget = targets[keeperDive];
+
+      // Move Goalkeeper
+      keeper.style.left = `${keeperTarget.x}%`;
+      keeper.style.bottom = `${keeperTarget.y - 30}px`;
+
+      // Move Ball
+      ball.style.transition = 'all 0.45s cubic-bezier(0.2, 0.9, 0.4, 1.1)';
+      ball.style.left = `${shot.x}%`;
+      ball.style.bottom = `${shot.y}px`;
+      ball.style.transform = 'translateX(-50%) scale(0.65)';
+
+      setTimeout(() => {
+        const isSaved = (keeperDive === targetCode);
+        const pDots = document.getElementById('playerDots').children;
+
+        if (!isSaved) {
+          playerScore++;
+          AudioEngine.cheer();
+          document.getElementById('penaltyMessage').textContent = `GÓL! Skvělé zakončení do zóny ${targetCode}!`;
+          pDots[playerKicks].className = 'kick-dot scored';
+        } else {
+          document.getElementById('penaltyMessage').textContent = `CHYCENO! Brankář vystihl směr vaší střely!`;
+          pDots[playerKicks].className = 'kick-dot missed';
+        }
+
+        document.getElementById('playerPenaltyScore').textContent = playerScore;
+        playerKicks++;
+
+        // Simulate AI Kick after 1 second
+        setTimeout(() => {
+          simulateAIKick();
+        }, 900);
+
+      }, 450);
+    }
+
+    function simulateAIKick() {
+      const aDots = document.getElementById('aiDots').children;
+      const aiScored = Math.random() < 0.65; // 65% AI success
+
+      if (aiScored) {
+        aiScore++;
+        AudioEngine.cheer();
+        aDots[aiKicks].className = 'kick-dot scored';
+      } else {
+        aDots[aiKicks].className = 'kick-dot missed';
+      }
+
+      aiKicks++;
+      document.getElementById('aiPenaltyScore').textContent = aiScore;
+
+      // Reset Ball for next round
+      setTimeout(() => {
+        const ball = document.getElementById('penaltyBall');
+        ball.style.transition = 'none';
+        ball.style.left = '50%';
+        ball.style.bottom = '20px';
+        ball.style.transform = 'translateX(-50%) scale(1)';
+
+        const keeper = document.getElementById('keeperFig');
+        keeper.style.left = '50%';
+        keeper.style.bottom = '0';
+
+        isShooting = false;
+
+        if (playerKicks >= 5) {
+          let outcome = "Rozstřel skončil nerozhodně!";
+          if (playerScore > aiScore) outcome = "VÍTĚZSTVÍ! Vyhráli jste penaltový rozstřel!";
+          else if (aiScore > playerScore) outcome = "PORÁŽKA! Brankář a soupeř vás přemohli.";
+          document.getElementById('penaltyMessage').textContent = outcome;
+          showToast(outcome);
+        } else {
+          document.getElementById('penaltyMessage').textContent = `Kolo ${playerKicks + 1} z 5: Zvolte další střelu.`;
+        }
+      }, 600);
+    }
+
+    // --- 7. TOURNAMENT & LEAGUE ---
+    const initialLeagueTeams = [
+      { name: "SK Slavia Praha", p: 14, w: 12, d: 2, l: 0, gf: 38, ga: 6, pts: 38 },
+      { name: "AC Sparta Praha", p: 14, w: 11, d: 1, l: 2, gf: 34, ga: 12, pts: 34 },
+      { name: "FC Viktoria Plzeň", p: 14, w: 9, d: 3, l: 2, gf: 28, ga: 14, pts: 30 },
+      { name: "FC Baník Ostrava", p: 14, w: 7, d: 3, l: 4, gf: 22, ga: 18, pts: 24 },
+      { name: "FK Mladá Boleslav", p: 14, w: 5, d: 4, l: 5, gf: 20, ga: 22, pts: 19 },
+      { name: "FC Slovan Liberec", p: 14, w: 4, d: 4, l: 6, gf: 17, ga: 24, pts: 16 }
+    ];
+
+    function renderLeagueTable() {
+      const tbody = document.getElementById('leagueTableBody');
+      tbody.innerHTML = '';
+
+      initialLeagueTeams.forEach((team, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-weight:600; text-align:left;">
+            <span style="color:var(--text-dim); margin-right:6px;">${idx + 1}.</span>
+            ${team.name}
+          </td>
+          <td style="text-align:center; font-family:var(--font-mono);">${team.p}</td>
+          <td style="text-align:center; font-family:var(--font-mono);">${team.w}</td>
+          <td style="text-align:center; font-family:var(--font-mono);">${team.d}</td>
+          <td style="text-align:center; font-family:var(--font-mono);">${team.l}</td>
+          <td style="text-align:center; font-family:var(--font-mono);">${team.gf}:${team.ga}</td>
+          <td style="text-align:right; font-weight:700; font-family:var(--font-mono); color:var(--accent-emerald);">${team.pts}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function simulateFullTournament() {
+      AudioEngine.whistle();
+      // Semifinals
+      const s1 = Math.floor(Math.random() * 3) + 2;
+      const s2 = Math.floor(Math.random() * 2);
+      const s3 = Math.floor(Math.random() * 3) + 1;
+      const s4 = Math.floor(Math.random() * 2);
+
+      document.getElementById('semiScore1').textContent = s1;
+      document.getElementById('semiScore2').textContent = s2;
+      document.getElementById('semiScore3').textContent = s3;
+      document.getElementById('semiScore4').textContent = s4;
+
+      // Final
+      const f1 = Math.floor(Math.random() * 3) + 1;
+      const f2 = Math.floor(Math.random() * 3);
+      document.getElementById('finalScore1').textContent = f1;
+      document.getElementById('finalScore2').textContent = f2;
+
+      let winner = f1 >= f2 ? "Slavia Praha" : "Sparta Praha";
+      document.getElementById('tournamentWinnerTag').textContent = `🏆 Vítěz poháru: ${winner}!`;
+      AudioEngine.cheer();
+      showToast(`Pohár vyhrává tým ${winner}!`);
+    }
+
+    // --- 8. FOOTBALL TRIVIA QUIZ ---
+    const quizData = [
+      {
+        question: "Který klub vyhrál historicky nejvíce titulů v Lize mistrů UEFA (včetně PMEZ)?",
+        category: "Liga mistrů",
+        options: ["Bayern München", "AC Milán", "Real Madrid", "FC Barcelona"],
+        correct: 2,
+        explanation: "Real Madrid ovládl Ligu mistrů rekordních 15krát."
+      },
+      {
+        question: "Kdo je historicky nejlepším střelcem české fotbalové reprezentace?",
+        category: "Česká reprezentace",
+        options: ["Milan Baroš", "Jan Koller", "Pavel Nedvěd", "Patrik Schick"],
+        correct: 1,
+        explanation: "Jan Koller vstřelil v dresu národního týmu úctyhodných 55 gólů v 91 zápasech."
+      },
+      {
+        question: "Ve kterém roce vyhrál Pavel Nedvěd prestižní Zlatý míč (Ballon d'Or)?",
+        category: "Ocenění & Legendy",
+        options: ["1996", "2001", "2003", "2006"],
+        correct: 2,
+        explanation: "Pavel Nedvěd získal Zlatý míč v roce 2003 po fantastické sezóně v Juventusu Turín."
+      },
+      {
+        question: "Která země vyhrála Mistrovství světa ve fotbale v roce 2022 v Kataru?",
+        category: "Mistrovství světa",
+        options: ["Francie", "Argentina", "Brazílie", "Chorvatsko"],
+        correct: 1,
+        explanation: "Argentina s kapitánem Lionelem Messim zvítězila po penaltovém rozstřelu s Francií."
+      },
+      {
+        question: "Jaký je maximální povolený počet střídání v základní hrací době v profesionálním fotbale dle pravidel IFAB?",
+        category: "Fotbalová pravidla",
+        options: ["3 střídání", "4 střídání", "5 střídání (ve 3 přerušeních)", "6 střídání"],
+        correct: 2,
+        explanation: "Od roku 2020 pravidla povolují 5 střídání ve 3 herních slotech."
+      }
+    ];
+
+    let currentQuizIndex = 0;
+    let quizScore = 0;
+    let quizAnswered = false;
+
+    function renderCurrentQuiz() {
+      const q = quizData[currentQuizIndex];
+      quizAnswered = false;
+      document.getElementById('quizIndexTag').textContent = `Otázka ${currentQuizIndex + 1} z ${quizData.length}`;
+      document.getElementById('quizCategoryTag').textContent = q.category;
+      document.getElementById('quizQuestionText').textContent = q.question;
+      document.getElementById('quizExplanation').style.display = 'none';
+      document.getElementById('nextQuestionBtn').style.display = 'none';
+
+      const container = document.getElementById('quizOptionsContainer');
+      container.innerHTML = '';
+
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-btn';
+        btn.innerHTML = `<span>${opt}</span><span style="font-weight:700; color:var(--text-dim);">${String.fromCharCode(65 + idx)}</span>`;
+        btn.onclick = () => handleQuizAnswer(idx, btn);
+        container.appendChild(btn);
+      });
+    }
+
+    function handleQuizAnswer(selectedIndex, selectedBtn) {
+      if (quizAnswered) return;
+      quizAnswered = true;
+
+      const q = quizData[currentQuizIndex];
+      const buttons = document.querySelectorAll('.quiz-btn');
+
+      buttons.forEach((btn, idx) => {
+        btn.disabled = true;
+        if (idx === q.correct) {
+          btn.classList.add('correct');
+        }
+      });
+
+      if (selectedIndex === q.correct) {
+        quizScore++;
+        AudioEngine.cheer();
+        showToast("Správná odpověď!");
+      } else {
+        selectedBtn.classList.add('wrong');
+        showToast("Bohužel špatně!");
+      }
+
+      document.getElementById('quizScoreHeader').textContent = `Skóre: ${quizScore} / ${quizData.length}`;
+      const expl = document.getElementById('quizExplanation');
+      expl.innerHTML = `<strong>Vysvětlení:</strong> ${q.explanation}`;
+      expl.style.display = 'block';
+
+      document.getElementById('nextQuestionBtn').style.display = 'inline-flex';
+    }
+
+    function nextQuizQuestion() {
+      currentQuizIndex++;
+      if (currentQuizIndex < quizData.length) {
+        renderCurrentQuiz();
+      } else {
+        // Quiz completed
+        const box = document.getElementById('quizCardBox');
+        box.innerHTML = `
+          <div style="text-align:center; padding:20px;">
+            <h2 style="font-size:24px; font-weight:800; color:#fff; margin-bottom:10px;">Kvíz dokončen!</h2>
+            <p style="font-size:16px; color:var(--text-muted); margin-bottom:20px;">
+              Vaše konečné skóre: <strong style="color:var(--accent-emerald); font-size:22px;">${quizScore} z ${quizData.length}</strong>
+            </p>
+            <button class="btn-action" onclick="restartQuiz()">Zkusit znovu</button>
+          </div>
+        `;
+        showToast(`Kvíz dokončen se skóre ${quizScore}/${quizData.length}`);
+      }
+    }
+
+    function restartQuiz() {
+      currentQuizIndex = 0;
+      quizScore = 0;
+      renderCurrentQuiz();
+      document.getElementById('quizScoreHeader').textContent = `Skóre: 0 / ${quizData.length}`;
+    }
+
+    // --- 9. EXPORT & BACKUP DATA ---
+    function exportData() {
+      const backup = {
+        author: "Šimon Kreperát",
+        project: "Fotbalový Manažer & Taktický Simulátor",
+        date: new Date().toISOString(),
+        tactics: currentPlayers,
+        matchHistory: { homeScore, awayScore, stats: matchStats }
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'kreperat_fotbal_data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Data byla vyexportována do JSON souboru.");
+    }
+
+    // --- INITIALIZATION ---
+    window.addEventListener('DOMContentLoaded', () => {
+      // Load saved tactics if available
+      const saved = localStorage.getItem('kreperat_tactics');
+      if (saved) {
+        try {
+          currentPlayers = JSON.parse(saved);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      renderPitchPlayers();
+      selectPlayer(10);
+      renderLeagueTable();
+      renderCurrentQuiz();
+    });
+  </script>
+</body>
+</html>
